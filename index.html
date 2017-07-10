@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>坐标系中的柱形图</title>
+    <style>
+        .axis path,.axis line{
+            fill:none;
+            stroke:black;
+            shape-rendering:crispEdges;
+        }
+        .tooltip{
+            width:100px;
+            height:50px;
+            border:1px solid #000000;
+            border-radius: 3px;
+            position:absolute;
+            background:#000;
+            color:#fff;
+            line-height:1.6em ;
+            display:none;
+            font-size:14px;
+
+        }
+        .axis line {
+            fill:#aaa;
+            stroke:#aaa;
+        }
+    </style>
+</head>
+<body>
+    <script src="d3.min.js"></script>
+    <script>
+        //第一部分:加载要显示的月份
+        d3.json("month.json",function(result){
+            console.log(result);
+            //1定义比例尺
+            var yAxData=[0,12];
+            //要显示的月份
+            var monthShow=result.obj;
+            //根据要显示的月份绘制坐标轴
+            //定义坐标宽度和高度
+            var xAxisWidth=1000;//x轴宽度
+            var yAxisWidth=500;//y轴高度
+            //提示框
+            var tooltip=d3.select("body").append("div").attr("class","tooltip");
+            //x定义序数比例尺
+            var xScale=d3.scale.ordinal()
+                    .domain(d3.range(monthShow.length))
+                    .rangeRoundBands([0,xAxisWidth],0.4);
+            var xScaleS=d3.scale.ordinal()
+                    .domain(monthShow)
+                    .rangeRoundBands([0,xAxisWidth],0.4);
+            //y轴线性比例尺
+            var yScale=d3.scale.linear()
+                    .domain([d3.min(yAxData),d3.max(yAxData)])
+                    .range([0,yAxisWidth]);
+            var svg=d3.select("body").append("svg")
+                    .attr("width",1300)
+                    .attr("height",1200);
+            var con=svg.append("g").attr("transform","translate(50,50)");
+            var color=d3.scale.category20();
+            //定义一个数据用于保存月份的坐标
+            var sendArr=[];
+            con.selectAll("rect").data(monthShow).enter()
+                    .append("rect")
+                    .attr("id",function(d,i){return i;})
+                    .attr("x",function(d,i){
+                        var sendX=xScale(i)+xScale.rangeBand()/2;
+                        sendArr.push(sendX);
+                        return xScale(i);
+                    })
+                    .attr("y",function(d,i){return yAxisWidth-yScale(d3.max(yAxData));})
+                    .attr("width",xScale.rangeBand())
+                    .attr("height",function(d){return yScale(d3.max(yAxData));})
+                    .attr("fill","none")
+                    .attr("stroke","#eee");
+            //添加坐标轴
+            var xAxis=d3.svg.axis()
+                    .scale(xScaleS)
+                    .orient("bottom")
+                    .tickSize(-500,0);
+            con.append("g")
+                    .attr("class","axis")
+                    .attr("transform","translate(0,500)")
+                    .call(xAxis);
+
+            //添加y轴
+            yScale.range([yAxisWidth,0]);
+            var yAxis=d3.svg.axis()
+                            .scale(yScale)
+                            .orient("left");
+            con.append("g")
+                    .attr("class","axis")
+                    .call(yAxis);
+            console.log(sendArr);
+            console.log(sendArr.join());
+            //第二部分：根据发送的x轴坐标，后台发送请求数据的x及y坐标
+            d3.json('circle.json',function(d){
+                //所有要显示的数据
+                var circleS= d.obj;
+               circleS.forEach(function(d,i){
+                   var circleShow= d.drawCircle;
+                   circleShow.forEach(function(d,i){
+                       var circleX= d.cx;
+                       var circleY= d.cy;
+                       d3.select("svg").append("circle")
+                               .attr("cx",circleX)
+                               .attr("cy", yScale(circleY))
+                               .attr("r",5)
+                               .attr("fill", color(i))
+                               .attr("transform","translate(50,50)");
+                   });
+               });
+
+            });
+
+        });
+
+    </script>
+</body>
+</html>
